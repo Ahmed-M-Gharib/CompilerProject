@@ -13,7 +13,6 @@ namespace TinyLanguageScanner
         IF, ELSEIF, ELSE, THEN, RETURN, ENDL, MAIN,
 
         IDENTIFIER,
-        FUNCTION_CALL,
 
         ARITHMETIC_OP,
         ASSIGN_OP,
@@ -28,7 +27,6 @@ namespace TinyLanguageScanner
         RIGHT_BRACE,
 
         COMMENT,
-
         UNKNOWN
     }
 
@@ -55,28 +53,21 @@ namespace TinyLanguageScanner
     {
         private static readonly List<(TokenType Type, Regex Pattern)> TokenPatterns = new()
         {
-            (TokenType.UNKNOWN,       new Regex(@"^\s+", RegexOptions.Compiled)),
-
+            (TokenType.UNKNOWN,       new Regex(@"^\s+",            RegexOptions.Compiled)),
             (TokenType.COMMENT,       new Regex(@"^/\*[\s\S]*?\*/", RegexOptions.Compiled)),
-
-            (TokenType.STRING,        new Regex(@"^""[^""]*""", RegexOptions.Compiled)),
-
-            (TokenType.CONDITION_OP,  new Regex(@"^<>", RegexOptions.Compiled)),
-            (TokenType.BOOLEAN_OP,    new Regex(@"^(&&|\|\|)", RegexOptions.Compiled)),
-            (TokenType.ASSIGN_OP,     new Regex(@"^:=", RegexOptions.Compiled)),
-
-            (TokenType.CONDITION_OP,  new Regex(@"^[<>=]", RegexOptions.Compiled)),
-            (TokenType.ARITHMETIC_OP, new Regex(@"^[+\-*/]", RegexOptions.Compiled)),
-
-            (TokenType.SEMICOLON,     new Regex(@"^;", RegexOptions.Compiled)),
-            (TokenType.COMMA,         new Regex(@"^,", RegexOptions.Compiled)),
-            (TokenType.LEFT_PAREN,    new Regex(@"^\(", RegexOptions.Compiled)),
-            (TokenType.RIGHT_PAREN,   new Regex(@"^\)", RegexOptions.Compiled)),
-            (TokenType.LEFT_BRACE,    new Regex(@"^\{", RegexOptions.Compiled)),
-            (TokenType.RIGHT_BRACE,   new Regex(@"^\}", RegexOptions.Compiled)),
-
-            (TokenType.NUMBER,        new Regex(@"^\d+(\.\d+)?", RegexOptions.Compiled)),
-
+            (TokenType.STRING,        new Regex(@"^""[^""]*""",     RegexOptions.Compiled)),
+            (TokenType.CONDITION_OP,  new Regex(@"^<>",             RegexOptions.Compiled)),
+            (TokenType.BOOLEAN_OP,    new Regex(@"^(&&|\|\|)",      RegexOptions.Compiled)),
+            (TokenType.ASSIGN_OP,     new Regex(@"^:=",             RegexOptions.Compiled)),
+            (TokenType.CONDITION_OP,  new Regex(@"^[<>=]",          RegexOptions.Compiled)),
+            (TokenType.ARITHMETIC_OP, new Regex(@"^[+\-*/]",        RegexOptions.Compiled)),
+            (TokenType.SEMICOLON,     new Regex(@"^;",              RegexOptions.Compiled)),
+            (TokenType.COMMA,         new Regex(@"^,",              RegexOptions.Compiled)),
+            (TokenType.LEFT_PAREN,    new Regex(@"^\(",             RegexOptions.Compiled)),
+            (TokenType.RIGHT_PAREN,   new Regex(@"^\)",             RegexOptions.Compiled)),
+            (TokenType.LEFT_BRACE,    new Regex(@"^\{",             RegexOptions.Compiled)),
+            (TokenType.RIGHT_BRACE,   new Regex(@"^\}",             RegexOptions.Compiled)),
+            (TokenType.NUMBER,        new Regex(@"^\d+(\.\d+)?",    RegexOptions.Compiled)),
             (TokenType.IDENTIFIER,    new Regex(@"^[a-zA-Z][a-zA-Z0-9]*", RegexOptions.Compiled)),
         };
 
@@ -140,18 +131,10 @@ namespace TinyLanguageScanner
                     if (type == TokenType.IDENTIFIER)
                     {
                         if (Keywords.TryGetValue(value, out TokenType kwType))
-                        {
                             tokens.Add(new Token(kwType, value, line));
-                        }
                         else
-                        {
-                            int peek = pos + value.Length;
-                            while (peek < source.Length && source[peek] == ' ') peek++;
-                            bool isCall = peek < source.Length && source[peek] == '(';
-                            tokens.Add(new Token(
-                                isCall ? TokenType.FUNCTION_CALL : TokenType.IDENTIFIER,
-                                value, line));
-                        }
+                            tokens.Add(new Token(TokenType.IDENTIFIER, value, line));
+
                         pos += value.Length;
                         matched = true;
                         break;
