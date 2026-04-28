@@ -10,11 +10,14 @@ namespace TinyScanner
     {
         private TextBox txtCode;
         private Button btnScan;
+        private Button btnParse;
         private Button btnClear;
         private DataGridView dgvTokens;
         private Label lblStatus;
         private Label lblCodeHeader;
         private Label lblTokensHeader;
+
+        private System.Collections.Generic.List<Token> lastTokens = null;
 
         public Form1()
         {
@@ -23,9 +26,9 @@ namespace TinyScanner
 
         private void InitializeComponents()
         {
-            this.Text = "Tiny Language - Lexical Analyzer";
-            this.Size = new Size(950, 600);
-            this.MinimumSize = new Size(800, 500);
+            this.Text = "Tiny Language - Scanner & Parser";
+            this.Size = new Size(950, 620);
+            this.MinimumSize = new Size(800, 520);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f);
 
@@ -63,10 +66,25 @@ namespace TinyScanner
             btnScan.FlatAppearance.BorderSize = 0;
             btnScan.Click += BtnScan_Click;
 
+            btnParse = new Button
+            {
+                Text = "Parse",
+                Location = new Point(400, 75),
+                Size = new Size(80, 32),
+                BackColor = Color.FromArgb(0, 140, 70),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Enabled = false
+            };
+            btnParse.FlatAppearance.BorderSize = 0;
+            btnParse.Click += BtnParse_Click;
+
             btnClear = new Button
             {
                 Text = "Clear",
-                Location = new Point(400, 75),
+                Location = new Point(400, 115),
                 Size = new Size(80, 32),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
@@ -75,6 +93,8 @@ namespace TinyScanner
                 txtCode.Clear();
                 dgvTokens.Rows.Clear();
                 lblStatus.Text = "";
+                lastTokens = null;
+                btnParse.Enabled = false;
             };
 
             lblTokensHeader = new Label
@@ -125,7 +145,7 @@ namespace TinyScanner
 
             this.Controls.AddRange(new Control[] {
                 lblCodeHeader, txtCode,
-                btnScan, btnClear,
+                btnScan, btnParse, btnClear,
                 lblTokensHeader, dgvTokens,
                 lblStatus
             });
@@ -136,6 +156,8 @@ namespace TinyScanner
         private void BtnScan_Click(object sender, EventArgs e)
         {
             dgvTokens.Rows.Clear();
+            lastTokens = null;
+            btnParse.Enabled = false;
 
             string source = txtCode.Text;
             if (string.IsNullOrWhiteSpace(source))
@@ -148,19 +170,42 @@ namespace TinyScanner
             var tokens = scanner.Tokenize(source);
 
             foreach (var tok in tokens)
-                dgvTokens.Rows.Add(tok.Line, tok.Type.ToString(), tok.Value);
+            {
+                string val = tok.Value.Length > 30 ? tok.Value[..30] + "..." : tok.Value;
+                dgvTokens.Rows.Add(tok.Line, tok.Type.ToString(), val);
+            }
 
             var errors = tokens.Where(t => t.Type == TokenType.UNKNOWN).ToList();
             if (errors.Any())
             {
                 lblStatus.ForeColor = Color.Red;
-                lblStatus.Text = $"Errors found: {errors.Count} unknown token(s) — " +
-                    string.Join(", ", errors.Select(t => $"line {t.Line}: '{t.Value}'"));
+                lblStatus.Text = $"Lexical errors: {errors.Count} unknown token(s)";
             }
             else
             {
                 lblStatus.ForeColor = Color.FromArgb(0, 130, 0);
-                lblStatus.Text = $"Done. {tokens.Count} tokens found, no errors.";
+                lblStatus.Text = $"Scan done. {tokens.Count} tokens. No lexical errors — click Parse to check syntax.";
+                lastTokens = tokens;
+                btnParse.Enabled = true;
+            }
+        }
+
+        private void BtnParse_Click(object sender, EventArgs e)
+        {
+            if (lastTokens == null) return;
+            try
+            {
+                var parser = new TinyParser(lastTokens);
+                parser.ParseProgram();
+                MessageBox.Show("Syntax is correct!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                lblStatus.ForeColor = Color.FromArgb(0, 130, 0);
+                lblStatus.Text = "Parse successful — no syntax errors.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Syntax Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.ForeColor = Color.Red;
+                lblStatus.Text = ex.Message;
             }
         }
 
@@ -172,7 +217,8 @@ namespace TinyScanner
 
             txtCode.Size = new Size(leftW - 120, h - 100);
             btnScan.Location = new Point(leftW - 100, 35);
-            btnClear.Location = new Point(leftW - 100, 75);
+            btnParse.Location = new Point(leftW - 100, 75);
+            btnClear.Location = new Point(leftW - 100, 115);
 
             int rightX = leftW + 20;
             lblTokensHeader.Location = new Point(rightX, 12);
